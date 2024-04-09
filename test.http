@@ -1,0 +1,12 @@
+### тест сокращателя
+POST /
+Host: localhost:8080
+Content-Type: text/plain
+
+https://practicum.yandex.ru/1
+
+### Возвращение ссылки (значение нужно менять)
+# @no-redirect
+GET /1 HTTP/1.1
+Host: localhost:8080
+Content-Type: text/plain

@@ -1,0 +1,18 @@
+OS=linux
+ARCH=amd64
+
+lint:
+	golangci-lint run --config ./.golangci.yml ./app/...
+
+swag-install:
+	go install github.com/swaggo/swag/cmd/swag@latest
+
+# На macOS не работает из makefile, нужно вручную вставлять в терминал
+swag-init:
+	swag init -g app/main.go
+
+run-app:
+	go build app/main --server
+
+compile:
+	go build app/cmd/server.go
