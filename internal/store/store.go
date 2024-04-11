@@ -10,11 +10,11 @@ type URLStore struct {
 }
 
 // ValueExistsInMap Function to check if a value exists in a sync.Map
-func (m *URLStore) ValueExistsInMap(searchValue string) (string, bool) {
+func (s *URLStore) ValueExistsInMap(searchValue string) (string, bool) {
 	var key string
 	found := false
 
-	m.URLs.Range(func(k, value interface{}) bool {
+	s.URLs.Range(func(k, value interface{}) bool {
 		if value == searchValue {
 			key = k.(string)
 			found = true
