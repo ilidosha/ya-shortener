@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"shortener/internal/config"
 	"shortener/internal/handlers"
+	"shortener/internal/store"
 )
 
 func main() {
@@ -15,6 +16,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Initialize the store
+	store.Init()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", handlers.ShortenURL(opts)).Methods("POST")

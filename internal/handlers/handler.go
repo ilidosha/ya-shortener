@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
+	"net/url"
 	"shortener/internal/config"
 	"shortener/internal/store"
+	"sync"
 )
 
 func ShortenURL(opts *config.Options) http.HandlerFunc {
@@ -18,15 +22,28 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 			return
 		}
 
-		// Generate a short URL
-		shortURL := fmt.Sprintf("%d", len(store.URLStore)+1)
+		// Check if the URL is valid
+		if _, err := url.ParseRequestURI(string(longURL)); err != nil {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
+		}
 
-		// Store the URL
-		store.URLStore[shortURL] = string(longURL)
+		// Check if the URL is already in the store
+		if shortURL, ok := store.Store.ValueExistsInMap(string(longURL)); ok {
+			w.WriteHeader(http.StatusConflict)
+			_, _ = fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURL)
+			return
+		}
+
+		// Generate a short URL
+		shortURL := generateShortURL(string(longURL), store.Store.GetStore())
+
+		// Save the URL
+		store.Store.Save(shortURL, string(longURL))
 
 		// Return the short URL
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURL)
+		_, _ = fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURL)
 	}
 }
 
@@ -35,12 +52,29 @@ func RedirectToURL(w http.ResponseWriter, r *http.Request) {
 	shortURL := vars["shortURL"]
 
 	// Look up the long URL
-	longURL, ok := store.URLStore[shortURL]
+	longURL, ok := store.Store.Find(shortURL)
 	if !ok {
 		http.NotFound(w, r)
 		return
 	}
 
 	// Redirect to the long URL
-	http.Redirect(w, r, longURL, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, longURL.(string), http.StatusTemporaryRedirect)
+}
+
+func generateShortURL(originalURL string, store *sync.Map) string {
+	hash := sha1.New()
+	hash.Write([]byte(originalURL))
+	shortURL := base64.URLEncoding.EncodeToString(hash.Sum(nil))[:6]
+
+	// Check for collisions and regenerate short URL if it already exists in the store
+	for {
+		if _, ok := store.Load(shortURL); !ok {
+			break
+		}
+		// Regenerate short URL
+		shortURL = base64.URLEncoding.EncodeToString(hash.Sum([]byte("some")))[:6]
+	}
+
+	return shortURL
 }

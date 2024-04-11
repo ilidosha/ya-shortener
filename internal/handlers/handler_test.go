@@ -5,12 +5,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"shortener/internal/config"
+	"shortener/internal/store"
 	"testing"
 
 	"github.com/gorilla/mux"
 )
 
 func TestShortenURL(t *testing.T) {
+	// Initialize the store
+	store.Init()
 	// Create a new request with a long URL in the body
 	longURL := "http://example.com/very/long/url"
 	req, err := http.NewRequest("POST", "/", bytes.NewBufferString(longURL))
@@ -37,7 +40,7 @@ func TestShortenURL(t *testing.T) {
 	}
 
 	// Check the response body is what we expect
-	expected := baseURL + "/1" // Assuming the first short URL is "1"
+	expected := baseURL + "/GDNEYi" // Assuming the first short URL is "1"
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expected)
 	}
@@ -45,7 +48,7 @@ func TestShortenURL(t *testing.T) {
 
 func TestRedirectToURL(t *testing.T) {
 	// Create a new request with a short URL in the path
-	shortURL := "1"
+	shortURL := "GDNEYi"
 	req, err := http.NewRequest("GET", "/"+shortURL, nil)
 	if err != nil {
 		t.Fatal(err)
