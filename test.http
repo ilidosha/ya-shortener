@@ -1,0 +1,12 @@
+### тест сокращателя
+POST /
+Host: localhost:8080
+Content-Type: text/plain
+
+http://example.com/very/long/url
+
+### Возвращение ссылки (значение нужно менять)
+# @no-redirect
+GET /GDNEi1 HTTP/1.1
+Host: localhost:8080
+Content-Type: text/plain
