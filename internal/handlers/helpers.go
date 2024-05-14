@@ -22,3 +22,10 @@ func generateShortURL(originalURL string, store *sync.Map) string {
 
 	return shortURL
 }
+
+func generateShortURLWithoutCheck(originalURL string) string {
+	hash := sha1.New()
+	hash.Write([]byte(originalURL))
+	shortURL := base64.URLEncoding.EncodeToString(hash.Sum(nil))[:6]
+	return shortURL
+}

@@ -223,7 +223,7 @@ func BatchInsert(opts *config.Options) http.HandlerFunc {
 			}
 
 			// Generate a short URL
-			shortURL := generateShortURL(req.OriginalURL, store.Store.GetStore())
+			shortURL := generateShortURLWithoutCheck(req.OriginalURL)
 
 			record := store.BatchValues{
 				UUID:        id.String(),
