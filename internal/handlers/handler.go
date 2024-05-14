@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 	"net/url"
@@ -72,20 +73,22 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Read the long URL from the request body
 		body, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
 		if err != nil {
 			http.Error(w, "Error reading request body", http.StatusBadRequest)
 			return
 		}
-		var request ShortenURLRequest
-		err = json.Unmarshal(body, &request)
-		if err != nil {
-			http.Error(w, "Error unmarshalling request body", http.StatusBadRequest)
-			return
-		}
 
+		var request ShortenURLRequest
 		// Check if the URL is valid
 		if _, err := url.ParseRequestURI(request.LongURL); err != nil {
 			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
+		}
+
+		err = json.Unmarshal(body, &request)
+		if err != nil {
+			http.Error(w, "Error unmarshalling request body", http.StatusBadRequest)
 			return
 		}
 
@@ -96,8 +99,16 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 			response := ShortenURLResponse{
 				ShortURL: fmt.Sprintf("%s/%s", opts.BaseURL, shortURL),
 			}
-			responseJSON, _ := json.Marshal(response)
-			_, _ = w.Write(responseJSON)
+			responseJSON, errMarshal := json.Marshal(response)
+			if errMarshal != nil {
+				log.Error().Err(errMarshal).Msg("Error marshalling response")
+				http.Error(w, "Error marshalling response", http.StatusInternalServerError)
+				return
+			}
+			_, errWrite := w.Write(responseJSON)
+			if errWrite != nil {
+				log.Err(errWrite).Msg("Error writing response")
+			}
 			return
 		}
 

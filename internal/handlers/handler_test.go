@@ -13,7 +13,7 @@ import (
 
 func TestShortenURL(t *testing.T) {
 	// Initialize the store
-	store.Init()
+	store.New()
 	// Create a new request with a long URL in the body
 	longURL := "http://example.com/very/long/url"
 	req, err := http.NewRequest("POST", "/", bytes.NewBufferString(longURL))

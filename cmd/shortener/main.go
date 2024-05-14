@@ -17,11 +17,11 @@ import (
 func main() {
 	opts, err := config.ParseOptions()
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
 	}
 
 	// Initialize the in-memory store
-	store.Init()
+	store.New()
 	// Initialize the file store if exists
 	if opts.FileStore != "" {
 		// Load from file store if exists
