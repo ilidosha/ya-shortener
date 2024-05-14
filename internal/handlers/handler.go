@@ -73,7 +73,12 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Read the long URL from the request body
 		body, err := io.ReadAll(r.Body)
-		defer r.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				log.Error().Err(err).Msg("Error closing request body")
+			}
+		}(r.Body)
 		if err != nil {
 			http.Error(w, "Error reading request body", http.StatusBadRequest)
 			return
@@ -88,7 +93,7 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 
 		err = json.Unmarshal(body, &request)
 		if err != nil {
-			http.Error(w, "Error unmarshalling request body", http.StatusBadRequest)
+			log.Info().Err(err).Msgf("Error unmarshalling request body")
 			return
 		}
 
