@@ -83,17 +83,16 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 			http.Error(w, "Error reading request body", http.StatusBadRequest)
 			return
 		}
-
 		var request ShortenURLRequest
-		// Check if the URL is valid
-		if _, err := url.ParseRequestURI(request.LongURL); err != nil {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
+		err = json.Unmarshal(body, &request)
+		if err != nil {
+			http.Error(w, "Error unmarshalling request body", http.StatusBadRequest)
 			return
 		}
 
-		err = json.Unmarshal(body, &request)
-		if err != nil {
-			log.Info().Err(err).Msgf("Error unmarshalling request body")
+		// Check if the URL is valid
+		if _, err := url.ParseRequestURI(request.LongURL); err != nil {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
 			return
 		}
 
@@ -107,13 +106,9 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 			responseJSON, errMarshal := json.Marshal(response)
 			if errMarshal != nil {
 				log.Error().Err(errMarshal).Msg("Error marshalling response")
-				http.Error(w, "Error marshalling response", http.StatusInternalServerError)
 				return
 			}
-			_, errWrite := w.Write(responseJSON)
-			if errWrite != nil {
-				log.Err(errWrite).Msg("Error writing response")
-			}
+			_, _ = w.Write(responseJSON)
 			return
 		}
 
