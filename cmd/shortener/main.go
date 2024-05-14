@@ -2,8 +2,10 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq" // Anonymous import for PostgreSQL driver
 	"github.com/rs/zerolog/log"
 	"net"
 	"net/http"
@@ -30,6 +32,20 @@ func main() {
 			log.Info().Msgf("Failed to load from file store: %s", errLoad)
 		}
 	}
+	// Initialize the database store if exists
+	if opts.ConnectionString != "" {
+		// Open the database connection
+		store.DB, err = sql.Open("postgres", opts.ConnectionString)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to open database connection")
+		}
+		defer store.DB.Close()
+		// Initialize the database
+		errInit := store.InitDB(store.DB)
+		if errInit != nil {
+			log.Fatal().Msgf("Failed to initialize database: %v", err)
+		}
+	}
 	// Setup log with debug level
 	logger.SetupLog(true)
 
@@ -41,8 +57,11 @@ func main() {
 	// Handlers
 	r.HandleFunc("/", handlers.ShortenURL(opts)).Methods("POST")
 	r.HandleFunc("/api/shorten", handlers.ShortenURLFromJSON(opts)).Methods("POST")
-	r.HandleFunc("/{shortURL}", handlers.RedirectToURL).Methods("GET")
+	r.HandleFunc("/{shortURL}", handlers.RedirectToURL(opts)).Methods("GET")
+	r.HandleFunc("/ping", handlers.Ping(opts)).Methods("GET")
+	r.HandleFunc("/api/shorten/batch", handlers.BatchInsert(opts)).Methods("POST")
 
+	// Start the server
 	fmt.Printf("Starting server on %s\n", opts.ServerAddress)
 	serv := http.Server{
 		Addr:    opts.ServerAddress,
