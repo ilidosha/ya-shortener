@@ -7,6 +7,24 @@ http://example.com/very/long/url
 
 ### Возвращение ссылки (значение нужно менять)
 # @no-redirect
-GET /GDNEi1 HTTP/1.1
+GET /GDNEYi HTTP/1.1
 Host: localhost:8080
 Content-Type: text/plain
+
+### json тест
+POST /api/shorten
+Host: localhost:8080
+Content-Type: application/json
+
+{
+  "url": "http://example.com/very/very/long/url/2"
+}
+
+### gzip тест
+POST http://localhost:8080/api/shorten
+Accept-Encoding: gzip
+Content-Type: application/json
+
+{
+  "url": "https://practicum.yandex.ru/is/2?easy"
+}
