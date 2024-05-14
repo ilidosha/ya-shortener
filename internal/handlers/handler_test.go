@@ -63,7 +63,7 @@ func TestRedirectToURL(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// Call the handler function, passing in the mock OptionParser
-	handler := http.HandlerFunc(RedirectToURL)
+	handler := http.HandlerFunc(RedirectToURL(&config.Options{}))
 	handler.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect
