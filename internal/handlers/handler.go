@@ -110,6 +110,7 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 				log.Error().Err(err).Msg("Error closing request body")
 			}
 		}(r.Body)
+		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			http.Error(w, "Error reading request body", http.StatusBadRequest)
 			return
@@ -129,7 +130,6 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 
 		// Check if the URL is already in the store
 		if shortURL, ok := store.Store.ValueExistsInMap(request.LongURL); ok {
-			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			response := ShortenURLResponse{
 				ShortURL: fmt.Sprintf("%s/%s", opts.BaseURL, shortURL),
@@ -163,7 +163,6 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 		}
 
 		// Return the short URL
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		response := ShortenURLResponse{
 			ShortURL: fmt.Sprintf("%s/%s", opts.BaseURL, shortURL),

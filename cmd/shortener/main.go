@@ -21,6 +21,8 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err)
 	}
+	// Setup log with debug level
+	logger.SetupLog(true)
 
 	// Initialize the in-memory store
 	store.New()
@@ -46,8 +48,6 @@ func main() {
 			log.Fatal().Msgf("Failed to initialize database: %v", err)
 		}
 	}
-	// Setup log with debug level
-	logger.SetupLog(true)
 
 	r := mux.NewRouter()
 	// Middlewares
