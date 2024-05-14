@@ -173,15 +173,13 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 	}
 }
 
-func Ping(opts *config.Options) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := store.DB.Ping(); err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "PONG")
+func Ping(w http.ResponseWriter, r *http.Request) {
+	if err := store.DB.Ping(); err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
 	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "PONG")
 }
 
 // BatchInsertRequest represents a batch insert request

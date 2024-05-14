@@ -57,8 +57,8 @@ func main() {
 	// Handlers
 	r.HandleFunc("/", handlers.ShortenURL(opts)).Methods("POST")
 	r.HandleFunc("/api/shorten", handlers.ShortenURLFromJSON(opts)).Methods("POST")
+	r.HandleFunc("/ping", handlers.Ping).Methods("GET")
 	r.HandleFunc("/{shortURL}", handlers.RedirectToURL(opts)).Methods("GET")
-	r.HandleFunc("/ping", handlers.Ping(opts)).Methods("GET")
 	r.HandleFunc("/api/shorten/batch", handlers.BatchInsert(opts)).Methods("POST")
 
 	// Start the server

@@ -29,6 +29,10 @@ Content-Type: application/json
   "url": "https://practicum.yandex.ru/is/2?easy"
 }
 
+### ping тест
+GET /ping
+host: localhost:8080
+
 ### Batch insert test
 POST /api/shorten/batch
 host: localhost:8080
