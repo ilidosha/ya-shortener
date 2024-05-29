@@ -145,6 +145,7 @@ func GetAllURLsForUser(uuid string) ([]URLRow, error) {
 }
 
 func SoftDeleteRecord(shortURL, uuid string) error {
+	log.Info().Msgf("Deleting URL %v and uuid %v", shortURL, uuid)
 	// Это бред какой-то я не понимаю, какой смысл от симметрично подписанной куки,
 	// если в тестах вылетает какая-то рандомная кука и при перепроверке вообще полный насрать на то тот-ли юзер (с той-же кукой) её удалил
 	// Может я чё-то не понял?
