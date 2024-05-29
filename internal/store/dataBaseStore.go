@@ -2,7 +2,6 @@ package store
 
 import (
 	"database/sql"
-	"errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -146,13 +145,13 @@ func GetAllURLsForUser(uuid string) ([]URLRow, error) {
 }
 
 func SoftDeleteRecord(shortURL, uuid string) error {
-	record, ok := ReadFromDB(shortURL)
-	if !ok {
-		return errors.New("record not found")
-	}
-	if record.UUID != uuid {
-		return errors.New("you do not have permission to delete this record")
-	}
+	//record, ok := ReadFromDB(shortURL)
+	//if !ok {
+	//	return errors.New("record not found")
+	//}
+	//if record.UUID != uuid {
+	//	return errors.New("you do not have permission to delete this record")
+	//}
 	_, err := DB.Exec(softDeleteSQL, shortURL, uuid)
 	if err != nil {
 		log.Err(err).Msgf("Error deleting record, %v", err)
