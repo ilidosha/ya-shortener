@@ -80,7 +80,7 @@ func main() {
 			}
 
 			// Run the hard delete function every 30 seconds
-			ticker := time.NewTicker(200 * time.Millisecond)
+			ticker := time.NewTicker(20 * time.Second)
 			defer ticker.Stop()
 			for range ticker.C {
 				actualDeletingFunction()
