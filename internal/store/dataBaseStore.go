@@ -36,7 +36,7 @@ const createTableSQL = `
 const softDeleteSQL = `
 		UPDATE urls
 		SET deleted_flag = true
-		WHERE short_url = $1 AND uuid = $2;
+		WHERE short_url = $1;
 	`
 
 // SQL statement to insert into the table
@@ -152,7 +152,7 @@ func SoftDeleteRecord(shortURL, uuid string) error {
 	//if record.UUID != uuid {
 	//	return errors.New("you do not have permission to delete this record")
 	//}
-	_, err := DB.Exec(softDeleteSQL, shortURL, uuid)
+	_, err := DB.Exec(softDeleteSQL, shortURL)
 	if err != nil {
 		log.Err(err).Msgf("Error deleting record, %v", err)
 		return err
