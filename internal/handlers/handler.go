@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"shortener/internal/config"
+	"shortener/internal/generator"
 	"shortener/internal/store"
 )
 
@@ -23,6 +24,7 @@ type ShortenURLResponse struct {
 
 func ShortenURL(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		dbExists := opts.ConnectionString != ""
 		// Read the long URL from the request body
 		longURL, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -44,7 +46,7 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 		}
 
 		// Check if exists in DB
-		if opts.ConnectionString != "" {
+		if dbExists {
 			if shortURL, exists := store.CheckIfExistsInDB(string(longURL)); exists {
 				w.WriteHeader(http.StatusConflict)
 				_, _ = fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURL)
@@ -53,13 +55,13 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 		}
 
 		// Generate a short URL
-		shortURL := generateShortURL(string(longURL), store.Store.GetStore())
+		shortURL := generator.ShortURL(string(longURL), store.Store.GetStore())
 
 		// Save the URL
 		store.Store.Save(shortURL, string(longURL), "", opts)
 
 		// save to db if exists
-		if opts.ConnectionString != "" {
+		if dbExists {
 			store.SaveToDB(shortURL, string(longURL), "")
 		}
 
@@ -102,6 +104,7 @@ func RedirectToURL(opts *config.Options) http.HandlerFunc {
 
 func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		dbExists := opts.ConnectionString != ""
 		// Read the long URL from the request body
 		body, err := io.ReadAll(r.Body)
 		defer func(Body io.ReadCloser) {
@@ -143,22 +146,32 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 			return
 		}
 		// Check if exists in DB
-		if opts.ConnectionString != "" {
+		if dbExists {
 			if shortURL, exists := store.CheckIfExistsInDB(request.LongURL); exists {
 				w.WriteHeader(http.StatusConflict)
-				_, _ = fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURL)
+				response := map[string]string{
+					"ShortURL": fmt.Sprintf("%s/%s", opts.BaseURL, shortURL),
+				}
+
+				responseJSON, errMarshal := json.Marshal(response)
+				if errMarshal != nil {
+					log.Error().Err(errMarshal).Msg("Error marshalling response")
+					return
+				}
+
+				_, _ = w.Write(responseJSON)
 				return
 			}
 		}
 
 		// Generate a short URL
-		shortURL := generateShortURL(request.LongURL, store.Store.GetStore())
+		shortURL := generator.ShortURL(request.LongURL, store.Store.GetStore())
 
 		// Save the URL
 		store.Store.Save(shortURL, request.LongURL, "", opts)
 
 		// DB store exists
-		if opts.ConnectionString != "" {
+		if dbExists {
 			store.SaveToDB(shortURL, request.LongURL, "")
 		}
 
@@ -222,7 +235,7 @@ func BatchInsert(opts *config.Options) http.HandlerFunc {
 			}
 
 			// Generate a short URL
-			shortURL := generateShortURLWithoutCheck(req.OriginalURL)
+			shortURL := generator.ShortURLWithoutCheck(req.OriginalURL)
 
 			record := store.BatchValues{
 				UUID:        id.String(),

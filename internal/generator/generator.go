@@ -1,4 +1,4 @@
-package handlers
+package generator
 
 import (
 	"crypto/sha1"
@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-func generateShortURL(originalURL string, store *sync.Map) string {
+func ShortURL(originalURL string, store *sync.Map) string {
 	hash := sha1.New()
 	hash.Write([]byte(originalURL))
 	shortURL := base64.URLEncoding.EncodeToString(hash.Sum(nil))[:6]
@@ -23,7 +23,7 @@ func generateShortURL(originalURL string, store *sync.Map) string {
 	return shortURL
 }
 
-func generateShortURLWithoutCheck(originalURL string) string {
+func ShortURLWithoutCheck(originalURL string) string {
 	hash := sha1.New()
 	hash.Write([]byte(originalURL))
 	shortURL := base64.URLEncoding.EncodeToString(hash.Sum(nil))[:6]

@@ -43,8 +43,8 @@ func main() {
 		}
 		defer store.DB.Close()
 		// Initialize the database
-		errInit := store.InitDB(store.DB)
-		if errInit != nil {
+		err = store.InitDB(store.DB)
+		if err != nil {
 			log.Fatal().Msgf("Failed to initialize database: %v", err)
 		}
 	}
@@ -62,7 +62,7 @@ func main() {
 	r.HandleFunc("/api/shorten/batch", handlers.BatchInsert(opts)).Methods("POST")
 
 	// Start the server
-	fmt.Printf("Starting server on %s\n", opts.ServerAddress)
+	log.Info().Msgf("Starting server on %s\n", opts.ServerAddress)
 	serv := http.Server{
 		Addr:    opts.ServerAddress,
 		Handler: r,
