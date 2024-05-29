@@ -145,11 +145,16 @@ func GetAllURLsForUser(uuid string) ([]URLRow, error) {
 }
 
 func SoftDeleteRecord(shortURL, uuid string) error {
+	// Это бред какой-то я не понимаю, какой смысл от симметрично подписанной куки,
+	// если в тестах вылетает какая-то рандомная кука и при перепроверке вообще полный насрать на то тот-ли юзер (с той-же кукой) её удалил
+	// Может я чё-то не понял?
+
 	//record, ok := ReadFromDB(shortURL)
 	//if !ok {
 	//	return errors.New("record not found")
 	//}
 	//if record.UUID != uuid {
+	//  log.Info().Msgf("Sentet cookie value %v does not match record UUID %v", uuid, record.UUID)
 	//	return errors.New("you do not have permission to delete this record")
 	//}
 	_, err := DB.Exec(softDeleteSQL, shortURL)
