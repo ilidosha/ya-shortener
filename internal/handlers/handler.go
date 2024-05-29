@@ -66,13 +66,14 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 				return
 			}
 		}
-		// Generate a short URL
-		shortURL := generator.ShortURL(string(longURL), store.Store.GetStore())
-
+		var shortURL string
+		// Generate a short URL and save
 		if dbExists {
+			shortURL = generator.ShortURLWithoutCheck(string(longURL))
 			store.SaveToDB(shortURL, string(longURL), id.String())
 		}
 		if !dbExists {
+			shortURL = generator.ShortURL(string(longURL), store.Store.GetStore())
 			store.Store.Save(shortURL, string(longURL), id.String(), opts)
 		}
 
@@ -159,8 +160,6 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 			Name:  "UserIDCookie",
 			Value: id.String(),
 		})
-		// Generate a short URL
-		shortURL := generator.ShortURL(request.LongURL, store.Store.GetStore())
 
 		// Check if the URL is already in the store
 		if !dbExists {
@@ -177,7 +176,6 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 				_, _ = w.Write(responseJSON)
 				return
 			}
-			store.Store.Save(shortURL, request.LongURL, id.String(), opts)
 		}
 
 		// Check if exists in DB
@@ -195,7 +193,17 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 				_, _ = w.Write(responseJSON)
 				return
 			}
-			store.SaveToDB(shortURL, request.LongURL, id.String())
+		}
+
+		var shortURL string
+		// Save to store
+		if dbExists {
+			shortURL = generator.ShortURLWithoutCheck(string(request.LongURL))
+			store.SaveToDB(shortURL, string(request.LongURL), id.String())
+		}
+		if !dbExists {
+			shortURL = generator.ShortURL(string(request.LongURL), store.Store.GetStore())
+			store.Store.Save(shortURL, string(request.LongURL), id.String(), opts)
 		}
 
 		// Return the short URL
