@@ -14,6 +14,7 @@ import (
 	"shortener/internal/logger"
 	"shortener/internal/middlewares"
 	"shortener/internal/store"
+	"time"
 )
 
 func main() {
@@ -63,21 +64,39 @@ func main() {
 	r.HandleFunc("/api/user/urls", handlers.GetAllURLsForUser(opts)).Methods("GET")
 	r.HandleFunc("/api/user/urls", handlers.DeleteFromURLs(opts)).Methods("DELETE")
 
-	// Start the server
-	log.Info().Msgf("Starting server on %s\n", opts.ServerAddress)
-	serv := http.Server{
-		Addr:    opts.ServerAddress,
-		Handler: r,
-	}
-	// Try to start the server
-	err = serv.ListenAndServe()
-	if err != nil {
-		// Check if the error is due to the port being in use
-		if _, ok := err.(*net.OpError); ok && err.(*net.OpError).Op == "listen" {
-			fmt.Printf("Error: Address %s is already in use\n", opts.ServerAddress)
-		} else {
-			fmt.Printf("Error starting server: %s\n", err)
+	// Starting the server in a separate goroutine
+	go func() {
+		log.Info().Msgf("Starting server on %s\n", opts.ServerAddress)
+		serv := http.Server{
+			Addr:    opts.ServerAddress,
+			Handler: r,
 		}
-		return
+		// Try to start the server
+		err = serv.ListenAndServe()
+		if err != nil {
+			// Check if the error is due to the port being in use
+			if _, ok := err.(*net.OpError); ok && err.(*net.OpError).Op == "listen" {
+				fmt.Printf("Error: Address %s is already in use\n", opts.ServerAddress)
+			} else {
+				fmt.Printf("Error starting server: %s\n", err)
+			}
+			return
+		}
+	}()
+
+	// Hard delete function
+	// Define the function to run every 30 seconds
+	actualDeletingFunction := func() {
+		store.HardDeleteRecord()
+	}
+
+	// Run the makeSomething function every 30 seconds
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			actualDeletingFunction()
+		}
 	}
 }

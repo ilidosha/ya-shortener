@@ -368,7 +368,7 @@ func DeleteFromURLs(opts *config.Options) http.HandlerFunc {
 		}
 		// Delete URLs from database
 		for _, shortURL := range shortURLs {
-			err = store.DeleteRecord(shortURL, cookie.Value)
+			err = store.SoftDeleteRecord(shortURL, cookie.Value)
 			if err != nil {
 				log.Error().Err(err).Msgf("Failed to delete URL, cause: %v", err)
 				break

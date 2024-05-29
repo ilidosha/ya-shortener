@@ -145,7 +145,7 @@ func GetAllURLsForUser(uuid string) ([]URLRow, error) {
 	return urls, nil
 }
 
-func DeleteRecord(shortURL, uuid string) error {
+func SoftDeleteRecord(shortURL, uuid string) error {
 	record, ok := ReadFromDB(shortURL)
 	if !ok {
 		return errors.New("record not found")
@@ -160,4 +160,12 @@ func DeleteRecord(shortURL, uuid string) error {
 	}
 	log.Info().Msgf("Record with short URL %s deleted successfully\n", shortURL)
 	return nil
+}
+
+func HardDeleteRecord() {
+	_, err := DB.Exec("DELETE FROM urls WHERE deleted_flag = true")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to hard delete records")
+	}
+	log.Info().Msg("Records with deleted_flag=true deleted successfully")
 }
