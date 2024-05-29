@@ -149,16 +149,14 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 		if dbExists {
 			if shortURL, exists := store.CheckIfExistsInDB(request.LongURL); exists {
 				w.WriteHeader(http.StatusConflict)
-				response := map[string]string{
-					"ShortURL": fmt.Sprintf("%s/%s", opts.BaseURL, shortURL),
+				response := ShortenURLResponse{
+					ShortURL: fmt.Sprintf("%s/%s", opts.BaseURL, shortURL),
 				}
-
 				responseJSON, errMarshal := json.Marshal(response)
 				if errMarshal != nil {
 					log.Error().Err(errMarshal).Msg("Error marshalling response")
 					return
 				}
-
 				_, _ = w.Write(responseJSON)
 				return
 			}
