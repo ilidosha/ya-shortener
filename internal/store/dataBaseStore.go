@@ -127,15 +127,15 @@ func BatchSave(BatchURLs []BatchValues) {
 	}
 }
 
-func GetAllURLsForUser(uuid string) ([]BatchValues, error) {
-	var urls []BatchValues
+func GetAllURLsForUser(uuid string) ([]URLRow, error) {
+	var urls []URLRow
 	rows, err := DB.Query("SELECT uuid, short_url, original_url FROM urls WHERE uuid = $1", uuid)
 	if err != nil || rows.Err() != nil { // А в чём разница?
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var url BatchValues
+		var url URLRow
 		err = rows.Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
 		if err != nil {
 			return nil, err

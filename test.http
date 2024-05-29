@@ -44,14 +44,19 @@ Content-Type: application/json
     "original_url": "https://practicum.yandex.ru/11"
   },
   {
-    "correlation_id": "2",
+    "correlation_id": "1",
     "original_url": "https://practicum.yandex.ru/22"
   },
   {
-    "correlation_id": "3a",
+    "correlation_id": "1",
     "original_url": "https://practicum.yandex.ru/33"
   }
 ]
+
+### GetAllByCookie
+GET /api/user/urls
+host: localhost:8080
+Cookie: UserIDCookie=cf04a26a-c031-4879-88bb-31f7e565cccf
 
 ### wrong Cookie for delete
 DELETE /api/user/urls
@@ -65,7 +70,7 @@ Content-Type: application/json
 ### Delete some
 DELETE /api/user/urls
 host: localhost:8080
-Cookie: UserIDCookie=0f9be580-0198-475a-ad86-aa1dedbddda9
+Cookie: UserIDCookie=a855375a-c9d4-4c5c-affb-1754d38a73c2
 Content-Type: application/json
 
 [ "wlqf96" ]

@@ -24,6 +24,11 @@ type ShortenURLResponse struct {
 
 func ShortenURL(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("UserIDCookie")
+		if err != nil || cookie.Value == "" {
+			http.Error(w, "Error getting cookie", http.StatusUnauthorized)
+			return
+		}
 		dbExists := opts.ConnectionString != ""
 		// Read the long URL from the request body
 		longURL, err := io.ReadAll(r.Body)
@@ -73,7 +78,7 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 
 		// save to db if exists
 		if dbExists {
-			store.SaveToDB(shortURL, string(longURL), "")
+			store.SaveToDB(shortURL, string(longURL), id.String())
 		}
 
 		// Return the short URL
@@ -249,18 +254,23 @@ func BatchInsert(opts *config.Options) http.HandlerFunc {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
+		// Generate a UUID for all batch
+		id, err := uuid.NewRandom()
+		if err != nil {
+			http.Error(w, "Failed to generate UUID", http.StatusInternalServerError)
+			return
+		}
+
+		// Set cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:  "UserIDCookie",
+			Value: id.String(),
+		})
 
 		// Convert the requests to URLRecords
 		var records []store.BatchValues
 		var responses []BatchInsertResponse
 		for _, req := range requests {
-			// Generate a UUID for each record
-			id, err := uuid.NewRandom()
-			if err != nil {
-				http.Error(w, "Failed to generate UUID", http.StatusInternalServerError)
-				return
-			}
-
 			// Generate a short URL
 			shortURL := generator.ShortURLWithoutCheck(req.OriginalURL)
 
