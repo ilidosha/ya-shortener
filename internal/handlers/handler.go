@@ -24,11 +24,6 @@ type ShortenURLResponse struct {
 
 func ShortenURL(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("UserIDCookie")
-		if err != nil || cookie.Value == "" {
-			http.Error(w, "Error getting cookie", http.StatusUnauthorized)
-			return
-		}
 		dbExists := opts.ConnectionString != ""
 		// Read the long URL from the request body
 		longURL, err := io.ReadAll(r.Body)
