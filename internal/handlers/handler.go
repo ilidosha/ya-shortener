@@ -37,22 +37,6 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 			http.Error(w, "Invalid URL", http.StatusBadRequest)
 			return
 		}
-
-		// Check if the URL is already in the store
-		if shortURL, ok := store.Store.ValueExistsInMap(string(longURL)); ok {
-			w.WriteHeader(http.StatusConflict)
-			_, _ = fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURL)
-			return
-		}
-
-		// Check if exists in DB
-		if dbExists {
-			if shortURL, exists := store.CheckIfExistsInDB(string(longURL)); exists {
-				w.WriteHeader(http.StatusConflict)
-				_, _ = fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURL)
-				return
-			}
-		}
 		// Generate a UUID for each record
 		id, err := uuid.NewRandom()
 		if err != nil {
@@ -65,15 +49,31 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 			Value: id.String(),
 		})
 
+		if !dbExists {
+			// Check if the URL is already in the store
+			if shortURLInStore, ok := store.Store.ValueExistsInMap(string(longURL)); ok {
+				w.WriteHeader(http.StatusConflict)
+				_, _ = fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURLInStore)
+				return
+			}
+		}
+
+		// if db exists
+		if dbExists {
+			if shortURLInStore, exists := store.CheckIfExistsInDB(string(longURL)); exists {
+				w.WriteHeader(http.StatusConflict)
+				_, _ = fmt.Fprintf(w, "%s/%s", opts.BaseURL, shortURLInStore)
+				return
+			}
+		}
 		// Generate a short URL
 		shortURL := generator.ShortURL(string(longURL), store.Store.GetStore())
 
-		// Save the URL
-		store.Store.Save(shortURL, string(longURL), id.String(), opts)
-
-		// save to db if exists
 		if dbExists {
 			store.SaveToDB(shortURL, string(longURL), id.String())
+		}
+		if !dbExists {
+			store.Store.Save(shortURL, string(longURL), id.String(), opts)
 		}
 
 		// Return the short URL
@@ -159,21 +159,27 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 			Name:  "UserIDCookie",
 			Value: id.String(),
 		})
+		// Generate a short URL
+		shortURL := generator.ShortURL(request.LongURL, store.Store.GetStore())
 
 		// Check if the URL is already in the store
-		if shortURL, ok := store.Store.ValueExistsInMap(request.LongURL); ok {
-			w.WriteHeader(http.StatusConflict)
-			response := ShortenURLResponse{
-				ShortURL: fmt.Sprintf("%s/%s", opts.BaseURL, shortURL),
-			}
-			responseJSON, errMarshal := json.Marshal(response)
-			if errMarshal != nil {
-				log.Error().Err(errMarshal).Msg("Error marshalling response")
+		if !dbExists {
+			if shortURL, ok := store.Store.ValueExistsInMap(request.LongURL); ok {
+				w.WriteHeader(http.StatusConflict)
+				response := ShortenURLResponse{
+					ShortURL: fmt.Sprintf("%s/%s", opts.BaseURL, shortURL),
+				}
+				responseJSON, errMarshal := json.Marshal(response)
+				if errMarshal != nil {
+					log.Error().Err(errMarshal).Msg("Error marshalling response")
+					return
+				}
+				_, _ = w.Write(responseJSON)
 				return
 			}
-			_, _ = w.Write(responseJSON)
-			return
+			store.Store.Save(shortURL, request.LongURL, id.String(), opts)
 		}
+
 		// Check if exists in DB
 		if dbExists {
 			if shortURL, exists := store.CheckIfExistsInDB(request.LongURL); exists {
@@ -189,16 +195,6 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 				_, _ = w.Write(responseJSON)
 				return
 			}
-		}
-
-		// Generate a short URL
-		shortURL := generator.ShortURL(request.LongURL, store.Store.GetStore())
-
-		// Save the URL
-		store.Store.Save(shortURL, request.LongURL, id.String(), opts)
-
-		// DB store exists
-		if dbExists {
 			store.SaveToDB(shortURL, request.LongURL, id.String())
 		}
 

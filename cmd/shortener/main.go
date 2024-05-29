@@ -27,7 +27,7 @@ func main() {
 	fileStoreExists := opts.FileStore != ""
 	dbExists := opts.ConnectionString != ""
 
-	// Initialize the in-memory store if db is not set
+	// Initialize the in-memory store
 	if !dbExists {
 		store.New()
 	}
@@ -80,7 +80,7 @@ func main() {
 			}
 
 			// Run the hard delete function every 30 seconds
-			ticker := time.NewTicker(100 * time.Millisecond)
+			ticker := time.NewTicker(200 * time.Millisecond)
 			defer ticker.Stop()
 			for range ticker.C {
 				actualDeletingFunction()
