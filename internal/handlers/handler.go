@@ -53,12 +53,23 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 				return
 			}
 		}
+		// Generate a UUID for each record
+		id, err := uuid.NewRandom()
+		if err != nil {
+			http.Error(w, "Failed to generate UUID", http.StatusInternalServerError)
+			return
+		}
+		// Set UserIDCookie
+		http.SetCookie(w, &http.Cookie{
+			Name:  "UserIDCookie",
+			Value: id.String(),
+		})
 
 		// Generate a short URL
 		shortURL := generator.ShortURL(string(longURL), store.Store.GetStore())
 
 		// Save the URL
-		store.Store.Save(shortURL, string(longURL), "", opts)
+		store.Store.Save(shortURL, string(longURL), id.String(), opts)
 
 		// save to db if exists
 		if dbExists {
@@ -73,23 +84,30 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 
 func RedirectToURL(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		dbExists := opts.ConnectionString != ""
+
 		vars := mux.Vars(r)
 		shortURL := vars["shortURL"]
 		// Prio to DB
 		// Look up for the long URL in the DB
-		if opts.ConnectionString != "" {
-			longURL, ok := store.ReadFromDB(shortURL)
+		if dbExists {
+			record, ok := store.ReadFromDB(shortURL)
+			// If deleted flag true
+			if record.DeletedFlag {
+				w.WriteHeader(http.StatusGone)
+				return
+			}
 			if !ok {
 				http.NotFound(w, r)
 				return
 			}
 			// Redirect to the long URL
-			http.Redirect(w, r, longURL, http.StatusTemporaryRedirect)
+			http.Redirect(w, r, record.OriginalURL, http.StatusTemporaryRedirect)
 			return
 		}
 
 		// Look up the long URL in in-memory store
-		if opts.ConnectionString == "" {
+		if !dbExists {
 			longURL, ok := store.Store.Find(shortURL)
 			if !ok {
 				http.NotFound(w, r)
@@ -130,6 +148,17 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 			http.Error(w, "Invalid URL", http.StatusBadRequest)
 			return
 		}
+		// Generate a UUID for each record
+		id, err := uuid.NewRandom()
+		if err != nil {
+			http.Error(w, "Failed to generate UUID", http.StatusInternalServerError)
+			return
+		}
+		// Set UserIDCookie
+		http.SetCookie(w, &http.Cookie{
+			Name:  "UserIDCookie",
+			Value: id.String(),
+		})
 
 		// Check if the URL is already in the store
 		if shortURL, ok := store.Store.ValueExistsInMap(request.LongURL); ok {
@@ -166,11 +195,11 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 		shortURL := generator.ShortURL(request.LongURL, store.Store.GetStore())
 
 		// Save the URL
-		store.Store.Save(shortURL, request.LongURL, "", opts)
+		store.Store.Save(shortURL, request.LongURL, id.String(), opts)
 
 		// DB store exists
 		if dbExists {
-			store.SaveToDB(shortURL, request.LongURL, "")
+			store.SaveToDB(shortURL, request.LongURL, id.String())
 		}
 
 		// Return the short URL
@@ -262,6 +291,84 @@ func BatchInsert(opts *config.Options) http.HandlerFunc {
 		if err != nil {
 			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 			return
+		}
+	}
+}
+
+type GetAllURLsResponse struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
+func GetAllURLsForUser(opts *config.Options) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("UserIDCookie")
+		if err != nil || cookie.Value == "" {
+			http.Error(w, "Error getting cookie", http.StatusUnauthorized)
+			return
+		}
+		var response []GetAllURLsResponse
+
+		// Get all URLs for the user
+		urls, err := store.GetAllURLsForUser(cookie.Value)
+		if err != nil {
+			http.Error(w, "Error getting URLs", http.StatusInternalServerError)
+			return
+		}
+		if urls == nil {
+			http.Error(w, "Error marshalling response", http.StatusNoContent)
+		}
+		for _, urli := range urls {
+			resp := GetAllURLsResponse{
+				ShortURL:    opts.BaseURL + "/" + urli.ShortURL,
+				OriginalURL: urli.OriginalURL,
+			}
+			response = append(response, resp)
+		}
+		res, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, "Error marshalling response", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(res)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to write response")
+			return
+		}
+	}
+}
+
+func DeleteFromURLs(opts *config.Options) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if opts.ConnectionString == "" {
+			http.Error(w, "я чайничек", http.StatusTeapot)
+		}
+		cookie, err := r.Cookie("UserIDCookie")
+		if err != nil || cookie.Value == "" {
+			http.Error(w, "Error getting cookie", http.StatusUnauthorized)
+			return
+		}
+		//it accepts mass of short urls
+		var shortURLs []string
+		err = json.NewDecoder(r.Body).Decode(&shortURLs)
+		if err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		// Delete URLs from database
+		for _, shortURL := range shortURLs {
+			err = store.DeleteRecord(shortURL, cookie.Value)
+			if err != nil {
+				log.Error().Err(err).Msgf("Failed to delete URL, cause: %v", err)
+				break
+			}
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		if err == nil {
+			w.WriteHeader(http.StatusAccepted)
 		}
 	}
 }

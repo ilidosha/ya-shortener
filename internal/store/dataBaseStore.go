@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -13,6 +14,15 @@ type BatchValues struct {
 	OriginalURL string `json:"original_url"`
 	ShortURL    string `json:"short_url"`
 	UUID        string `json:"uuid"`
+	DeletedFlag bool   `json:"-"`
+}
+
+// Define a struct to represent the row structure
+type URLRow struct {
+	OriginalURL string
+	ShortURL    string
+	UUID        string
+	DeletedFlag bool
 }
 
 // SQL statement to create the table
@@ -20,8 +30,15 @@ const createTableSQL = `
 		CREATE TABLE IF NOT EXISTS urls (
 			uuid TEXT,
 			short_url TEXT NOT NULL,
-			original_url TEXT NOT NULL
+			original_url TEXT NOT NULL,
+			deleted_flag BOOL NOT NULL DEFAULT FALSE
 		);`
+
+const softDeleteSQL = `
+		UPDATE urls
+		SET deleted_flag = true
+		WHERE short_url = $1 AND uuid = $2;
+	`
 
 // SQL statement to insert into the table
 const insertSQL = `INSERT INTO urls (uuid, short_url, original_url) VALUES ($1, $2, $3);`
@@ -30,7 +47,7 @@ const insertSQL = `INSERT INTO urls (uuid, short_url, original_url) VALUES ($1, 
 const deleteSQL = `DELETE FROM urls WHERE short_url = $1;`
 
 // SQL statement to select from the table
-const selectSQL = `SELECT original_url FROM urls WHERE short_url = $1;`
+const selectSQL = `SELECT uuid, short_url, original_url, deleted_flag FROM urls WHERE short_url = $1;`
 
 // NewDBStore creates a new store
 func InitDB(db *sql.DB) error {
@@ -66,13 +83,14 @@ func CheckIfExistsInDB(longURL string) (string, bool) {
 }
 
 // ReadFromDB reads a URL from the database
-func ReadFromDB(shortURL string) (originalURL string, ok bool) {
-	err := DB.QueryRow(selectSQL, shortURL).Scan(&originalURL)
+func ReadFromDB(shortURL string) (URLRow, bool) {
+	var urlRow URLRow
+	err := DB.QueryRow(selectSQL, shortURL).Scan(&urlRow.UUID, &urlRow.ShortURL, &urlRow.OriginalURL, &urlRow.DeletedFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to read URL")
-		return "", false
+		return URLRow{}, false
 	}
-	return originalURL, true
+	return urlRow, true
 }
 
 // BatchSave saves a batch of URLs to the database
@@ -107,4 +125,39 @@ func BatchSave(BatchURLs []BatchValues) {
 			return
 		}
 	}
+}
+
+func GetAllURLsForUser(uuid string) ([]BatchValues, error) {
+	var urls []BatchValues
+	rows, err := DB.Query("SELECT uuid, short_url, original_url FROM urls WHERE uuid = $1", uuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var url BatchValues
+		err = rows.Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
+		if err != nil {
+			return nil, err
+		}
+		urls = append(urls, url)
+	}
+	return urls, nil
+}
+
+func DeleteRecord(shortURL, uuid string) error {
+	record, ok := ReadFromDB(shortURL)
+	if !ok {
+		return errors.New("record not found")
+	}
+	if record.UUID != uuid {
+		return errors.New("you do not have permission to delete this record")
+	}
+	_, err := DB.Exec(softDeleteSQL, shortURL, uuid)
+	if err != nil {
+		log.Err(err).Msgf("Error deleting record, %v", err)
+		return err
+	}
+	log.Info().Msgf("Record with short URL %s deleted successfully\n", shortURL)
+	return nil
 }

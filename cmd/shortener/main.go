@@ -60,6 +60,8 @@ func main() {
 	r.HandleFunc("/ping", handlers.Ping).Methods("GET")
 	r.HandleFunc("/{shortURL}", handlers.RedirectToURL(opts)).Methods("GET")
 	r.HandleFunc("/api/shorten/batch", handlers.BatchInsert(opts)).Methods("POST")
+	r.HandleFunc("/api/user/urls", handlers.GetAllURLsForUser(opts)).Methods("GET")
+	r.HandleFunc("/api/user/urls", handlers.DeleteFromURLs(opts)).Methods("DELETE")
 
 	// Start the server
 	log.Info().Msgf("Starting server on %s\n", opts.ServerAddress)
