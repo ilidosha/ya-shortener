@@ -90,13 +90,10 @@ func main() {
 		store.HardDeleteRecord()
 	}
 
-	// Run the makeSomething function every 30 seconds
+	// Run the hard delete function every 30 seconds
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			actualDeletingFunction()
-		}
+	for range ticker.C {
+		actualDeletingFunction()
 	}
 }

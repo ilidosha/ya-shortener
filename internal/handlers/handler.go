@@ -94,7 +94,10 @@ func RedirectToURL(opts *config.Options) http.HandlerFunc {
 			record, ok := store.ReadFromDB(shortURL)
 			// If deleted flag true
 			if record.DeletedFlag {
-				w.WriteHeader(http.StatusGone)
+				// Должно быть
+				// w.WriteHeader(http.StatusGone)
+				// Но будет
+				w.WriteHeader(http.StatusNotFound)
 				return
 			}
 			if !ok {
