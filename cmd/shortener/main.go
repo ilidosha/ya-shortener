@@ -27,8 +27,10 @@ func main() {
 
 	// Initialize the in-memory store
 	store.New()
+	fileStoreExists := opts.FileStore != ""
+	dbExists := opts.ConnectionString != ""
 	// Initialize the file store if exists
-	if opts.FileStore != "" {
+	if fileStoreExists {
 		// Load from file store if exists
 		errLoad := store.Store.LoadFromFile(opts.FileStore)
 		if errLoad != nil {
@@ -36,7 +38,7 @@ func main() {
 		}
 	}
 	// Initialize the database store if exists
-	if opts.ConnectionString != "" {
+	if dbExists {
 		// Open the database connection
 		store.DB, err = sql.Open("postgres", opts.ConnectionString)
 		if err != nil {
@@ -84,16 +86,19 @@ func main() {
 		}
 	}()
 
-	// Hard delete function
-	// Define the function to run every 30 seconds
-	actualDeletingFunction := func() {
-		store.HardDeleteRecord()
-	}
+	// if db exists
+	if dbExists {
+		// Hard delete function
+		// Define the function to run every 30 seconds
+		actualDeletingFunction := func() {
+			store.HardDeleteRecord()
+		}
 
-	// Run the hard delete function every 30 seconds
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-	for range ticker.C {
-		actualDeletingFunction()
+		// Run the hard delete function every 30 seconds
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			actualDeletingFunction()
+		}
 	}
 }
