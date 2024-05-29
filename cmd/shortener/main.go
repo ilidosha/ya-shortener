@@ -3,7 +3,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq" // Anonymous import for PostgreSQL driver
 	"github.com/rs/zerolog/log"
@@ -25,10 +24,14 @@ func main() {
 	// Setup log with debug level
 	logger.SetupLog(true)
 
-	// Initialize the in-memory store
-	store.New()
 	fileStoreExists := opts.FileStore != ""
 	dbExists := opts.ConnectionString != ""
+
+	// Initialize the in-memory store
+	if !fileStoreExists && !dbExists {
+		store.New()
+	}
+
 	// Initialize the file store if exists
 	if fileStoreExists {
 		// Load from file store if exists
@@ -66,39 +69,40 @@ func main() {
 	r.HandleFunc("/api/user/urls", handlers.GetAllURLsForUser(opts)).Methods("GET")
 	r.HandleFunc("/api/user/urls", handlers.DeleteFromURLs(opts)).Methods("DELETE")
 
-	// Starting the server in a separate goroutine
-	go func() {
-		log.Info().Msgf("Starting server on %s\n", opts.ServerAddress)
-		serv := http.Server{
-			Addr:    opts.ServerAddress,
-			Handler: r,
-		}
-		// Try to start the server
-		err = serv.ListenAndServe()
-		if err != nil {
-			// Check if the error is due to the port being in use
-			if _, ok := err.(*net.OpError); ok && err.(*net.OpError).Op == "listen" {
-				fmt.Printf("Error: Address %s is already in use\n", opts.ServerAddress)
-			} else {
-				fmt.Printf("Error starting server: %s\n", err)
-			}
-			return
-		}
-	}()
-
-	// if db exists
+	// Initialize the hard deleter if db exists
 	if dbExists {
-		// Hard delete function
-		// Define the function to run every 30 seconds
-		actualDeletingFunction := func() {
-			store.HardDeleteRecord()
-		}
+		// Starting the deleter in a separate goroutine
+		go func() {
+			// Hard delete function
+			// Define the function to run every 30 seconds
+			actualDeletingFunction := func() {
+				store.HardDeleteRecord()
+			}
 
-		// Run the hard delete function every 30 seconds
-		ticker := time.NewTicker(100 * time.Millisecond)
-		defer ticker.Stop()
-		for range ticker.C {
-			actualDeletingFunction()
+			// Run the hard delete function every 30 seconds
+			ticker := time.NewTicker(100 * time.Millisecond)
+			defer ticker.Stop()
+			for range ticker.C {
+				actualDeletingFunction()
+			}
+
+		}()
+	}
+
+	log.Info().Msgf("Starting server on %s\n", opts.ServerAddress)
+	serv := http.Server{
+		Addr:    opts.ServerAddress,
+		Handler: r,
+	}
+	// Try to start the server
+	err = serv.ListenAndServe()
+	if err != nil {
+		// Check if the error is due to the port being in use
+		if _, ok := err.(*net.OpError); ok && err.(*net.OpError).Op == "listen" {
+			log.Error().Err(err).Msgf("Error: Address %s is already in use\n", opts.ServerAddress)
+		} else {
+			log.Error().Err(err).Msgf("Error starting server: %s\n", err)
 		}
+		return
 	}
 }
