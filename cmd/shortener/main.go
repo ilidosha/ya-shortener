@@ -27,8 +27,8 @@ func main() {
 	fileStoreExists := opts.FileStore != ""
 	dbExists := opts.ConnectionString != ""
 
-	// Initialize the in-memory store
-	if !fileStoreExists && !dbExists {
+	// Initialize the in-memory store if db is not set
+	if !dbExists {
 		store.New()
 	}
 
