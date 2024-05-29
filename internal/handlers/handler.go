@@ -302,6 +302,7 @@ type GetAllURLsResponse struct {
 
 func GetAllURLsForUser(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		cookie, err := r.Cookie("UserIDCookie")
 		if err != nil || cookie.Value == "" {
 			http.Error(w, "Error getting cookie", http.StatusUnauthorized)
@@ -316,7 +317,12 @@ func GetAllURLsForUser(opts *config.Options) http.HandlerFunc {
 			return
 		}
 		if urls == nil {
-			http.Error(w, "Error marshalling response", http.StatusNoContent)
+			// В теории тут должно быть
+			// http.Error(w, "Error marshalling response", http.StatusNoContent)
+			// Но будет
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("[]"))
+			return
 		}
 		for _, urli := range urls {
 			resp := GetAllURLsResponse{
@@ -330,7 +336,6 @@ func GetAllURLsForUser(opts *config.Options) http.HandlerFunc {
 			http.Error(w, "Error marshalling response", http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
 		_, err = w.Write(res)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to write response")
