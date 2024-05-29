@@ -35,6 +35,7 @@ func New() {
 
 // Save Function to store the URL
 func (s *URLStore) Save(key, value, uuid string, options *config.Options) {
+	fileStoreExixts := options.FileStore != ""
 	var values MapValues
 	if uuid != "" {
 		values = MapValues{
@@ -49,8 +50,8 @@ func (s *URLStore) Save(key, value, uuid string, options *config.Options) {
 		}
 	}
 	s.URLs.Store(key, values)
-	// Save to file if FileStore is set, and if UUID is not set (uuid set means it was already saved to file)
-	if options.FileStore != "" && uuid == "" {
+	// Save to file if FileStore is set
+	if fileStoreExixts {
 		err := s.SaveToFile(options.FileStore)
 		if err != nil {
 			if err.Error() != "key already exists" {
