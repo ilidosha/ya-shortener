@@ -28,3 +28,27 @@ Content-Type: application/json
 {
   "url": "https://practicum.yandex.ru/is/2?easy"
 }
+
+### ping тест
+GET /ping
+host: localhost:8080
+
+### Batch insert test
+POST /api/shorten/batch
+host: localhost:8080
+Content-Type: application/json
+
+[
+  {
+    "correlation_id": "1",
+    "original_url": "https://practicum.yandex.ru/11"
+  },
+  {
+    "correlation_id": "2",
+    "original_url": "https://practicum.yandex.ru/22"
+  },
+  {
+    "correlation_id": "3a",
+    "original_url": "https://practicum.yandex.ru/33"
+  }
+]

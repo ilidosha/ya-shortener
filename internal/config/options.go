@@ -6,9 +6,10 @@ import (
 )
 
 type Options struct {
-	ServerAddress string `short:"a" long:"address" description:"Server address" env:"SERVER_ADDRESS" default:"localhost:8080"`
-	BaseURL       string `short:"b" long:"url" description:"Base URL for shortened URLs" env:"BASE_URL" default:"http://localhost:8080"`
-	FileStore     string `short:"f" long:"file" description:"Base file storage path" env:"FILE_STORAGE_PATH" default:""`
+	ServerAddress    string `short:"a" long:"address" description:"Server address" env:"SERVER_ADDRESS" default:"localhost:8080"`
+	BaseURL          string `short:"b" long:"url" description:"Base URL for shortened URLs" env:"BASE_URL" default:"http://localhost:8080"`
+	FileStore        string `short:"f" long:"file" description:"Base file storage path" env:"FILE_STORAGE_PATH" default:""`
+	ConnectionString string `short:"d" long:"database" description:"Data base connection string" env:"DATABASE_DSN" default:""`
 }
 
 // ParseOptions parses the options from environment variables and command line arguments.
@@ -22,6 +23,7 @@ func ParseOptions() (*Options, error) {
 	serverAddressEnv := os.Getenv("SERVER_ADDRESS")
 	baseURLEnv := os.Getenv("BASE_URL")
 	fileStoreEnv := os.Getenv("FILE_STORAGE_PATH")
+	dataBaseEnv := os.Getenv("DATABASE_DSN")
 
 	// Check if environment variables are set and assign them to the options
 	if serverAddressEnv != "" {
@@ -33,9 +35,12 @@ func ParseOptions() (*Options, error) {
 	if fileStoreEnv != "" {
 		opts.FileStore = fileStoreEnv
 	}
+	if dataBaseEnv != "" {
+		opts.ConnectionString = dataBaseEnv
+	}
 
 	// Parse the command line arguments only if environment variables are not set
-	if serverAddressEnv == "" || baseURLEnv == "" || fileStoreEnv == "" {
+	if serverAddressEnv == "" || baseURLEnv == "" || fileStoreEnv == "" || dataBaseEnv == "" {
 		parser := flags.NewParser(&args, flags.Default)
 		_, err := parser.Parse()
 		if err != nil {
@@ -51,6 +56,9 @@ func ParseOptions() (*Options, error) {
 		}
 		if fileStoreEnv == "" && args.FileStore != "" {
 			opts.FileStore = args.FileStore
+		}
+		if dataBaseEnv == "" && args.ConnectionString != "" {
+			opts.ConnectionString = args.ConnectionString
 		}
 	}
 
