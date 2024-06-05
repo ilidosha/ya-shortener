@@ -44,11 +44,39 @@ Content-Type: application/json
     "original_url": "https://practicum.yandex.ru/11"
   },
   {
-    "correlation_id": "2",
+    "correlation_id": "1",
     "original_url": "https://practicum.yandex.ru/22"
   },
   {
-    "correlation_id": "3a",
+    "correlation_id": "1",
     "original_url": "https://practicum.yandex.ru/33"
   }
 ]
+
+### GetAllByCookie
+GET /api/user/urls
+host: localhost:8080
+Cookie: UserIDCookie=cf04a26a-c031-4879-88bb-31f7e565cccf
+
+### wrong Cookie for delete
+DELETE /api/user/urls
+host: localhost:8080
+Cookie: UserIDCookie=wrongCookie
+Content-Type: application/json
+
+[ "wlqf96" ]
+
+
+### Delete some
+DELETE /api/user/urls
+host: localhost:8080
+Cookie: UserIDCookie=a855375a-c9d4-4c5c-affb-1754d38a73c2
+Content-Type: application/json
+
+[ "wlqf96" ]
+
+### Возвращение ссылки (значение нужно менять)
+# @no-redirect
+GET /wlqf96 HTTP/1.1
+Host: localhost:8080
+Content-Type: text/plain

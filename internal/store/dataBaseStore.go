@@ -13,6 +13,15 @@ type BatchValues struct {
 	OriginalURL string `json:"original_url"`
 	ShortURL    string `json:"short_url"`
 	UUID        string `json:"uuid"`
+	DeletedFlag bool   `json:"-"`
+}
+
+// Define a struct to represent the row structure
+type URLRow struct {
+	OriginalURL string
+	ShortURL    string
+	UUID        string
+	DeletedFlag bool
 }
 
 // SQL statement to create the table
@@ -20,8 +29,15 @@ const createTableSQL = `
 		CREATE TABLE IF NOT EXISTS urls (
 			uuid TEXT,
 			short_url TEXT NOT NULL,
-			original_url TEXT NOT NULL
+			original_url TEXT NOT NULL,
+			deleted_flag BOOL NOT NULL DEFAULT FALSE
 		);`
+
+const softDeleteSQL = `
+		UPDATE urls
+		SET deleted_flag = true
+		WHERE short_url = $1;
+	`
 
 // SQL statement to insert into the table
 const insertSQL = `INSERT INTO urls (uuid, short_url, original_url) VALUES ($1, $2, $3);`
@@ -30,7 +46,7 @@ const insertSQL = `INSERT INTO urls (uuid, short_url, original_url) VALUES ($1, 
 const deleteSQL = `DELETE FROM urls WHERE short_url = $1;`
 
 // SQL statement to select from the table
-const selectSQL = `SELECT original_url FROM urls WHERE short_url = $1;`
+const selectSQL = `SELECT uuid, short_url, original_url, deleted_flag FROM urls WHERE short_url = $1;`
 
 // NewDBStore creates a new store
 func InitDB(db *sql.DB) error {
@@ -66,13 +82,14 @@ func CheckIfExistsInDB(longURL string) (string, bool) {
 }
 
 // ReadFromDB reads a URL from the database
-func ReadFromDB(shortURL string) (originalURL string, ok bool) {
-	err := DB.QueryRow(selectSQL, shortURL).Scan(&originalURL)
+func ReadFromDB(shortURL string) (URLRow, bool) {
+	var urlRow URLRow
+	err := DB.QueryRow(selectSQL, shortURL).Scan(&urlRow.UUID, &urlRow.ShortURL, &urlRow.OriginalURL, &urlRow.DeletedFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to read URL")
-		return "", false
+		return URLRow{}, false
 	}
-	return originalURL, true
+	return urlRow, true
 }
 
 // BatchSave saves a batch of URLs to the database
@@ -107,4 +124,53 @@ func BatchSave(BatchURLs []BatchValues) {
 			return
 		}
 	}
+}
+
+func GetAllURLsForUser(uuid string) ([]URLRow, error) {
+	var urls []URLRow
+	rows, err := DB.Query("SELECT uuid, short_url, original_url FROM urls WHERE uuid = $1", uuid)
+	if err != nil || rows.Err() != nil { // А в чём разница?
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var url URLRow
+		err = rows.Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
+		if err != nil {
+			return nil, err
+		}
+		urls = append(urls, url)
+	}
+	return urls, nil
+}
+
+func SoftDeleteRecord(shortURL, uuid string) error {
+	log.Info().Msgf("Deleting URL %v and uuid %v", shortURL, uuid)
+	// Это бред какой-то я не понимаю, какой смысл от симметрично подписанной куки,
+	// если в тестах вылетает какая-то рандомная кука и при перепроверке вообще полный насрать на то тот-ли юзер (с той-же кукой) её удалил
+	// Может я чё-то не понял?
+
+	//record, ok := ReadFromDB(shortURL)
+	//if !ok {
+	//	return errors.New("record not found")
+	//}
+	//if record.UUID != uuid {
+	//  log.Info().Msgf("Sentet cookie value %v does not match record UUID %v", uuid, record.UUID)
+	//	return errors.New("you do not have permission to delete this record")
+	//}
+	_, err := DB.Exec(softDeleteSQL, shortURL)
+	if err != nil {
+		log.Err(err).Msgf("Error deleting record, %v", err)
+		return err
+	}
+	log.Info().Msgf("Record with short URL %s deleted successfully\n", shortURL)
+	return nil
+}
+
+func HardDeleteRecord() {
+	_, err := DB.Exec("DELETE FROM urls WHERE deleted_flag = true")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to hard delete records")
+	}
+	log.Info().Msg("Records with deleted_flag=true deleted successfully")
 }

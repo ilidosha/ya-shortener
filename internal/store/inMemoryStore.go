@@ -9,17 +9,19 @@ import (
 // ValueExistsInMap Function to check if a value exists in a sync.Map
 func (s *URLStore) ValueExistsInMap(searchValue string) (string, bool) {
 	var key string
-	var ok bool
 	found := false
+	log.Info().Msgf("key %v", key)
 
 	s.URLs.Range(func(k, value interface{}) bool {
-		if value == searchValue {
-			key, ok = k.(string)
-			if !ok {
-				log.Error().Msg("Failed to convert key to string")
+		if mapValues, ok := value.(MapValues); ok {
+			if mapValues.Value == searchValue {
+				key = k.(string)
+				log.Info().Msgf("Value found in map %v, search value %v, key %v, k %v", value, searchValue, key, k)
+				found = true
+				return false // Stop iterating
 			}
-			found = true
-			return false // Stop iterating
+		} else {
+			log.Warn().Msg("Value is not of type MapValues")
 		}
 		return true // Continue iterating
 	})
@@ -35,6 +37,7 @@ func New() {
 
 // Save Function to store the URL
 func (s *URLStore) Save(key, value, uuid string, options *config.Options) {
+	fileStoreExixts := options.FileStore != ""
 	var values MapValues
 	if uuid != "" {
 		values = MapValues{
@@ -49,8 +52,8 @@ func (s *URLStore) Save(key, value, uuid string, options *config.Options) {
 		}
 	}
 	s.URLs.Store(key, values)
-	// Save to file if FileStore is set, and if UUID is not set (uuid set means it was already saved to file)
-	if options.FileStore != "" && uuid == "" {
+	// Save to file if FileStore is set
+	if fileStoreExixts {
 		err := s.SaveToFile(options.FileStore)
 		if err != nil {
 			if err.Error() != "key already exists" {
