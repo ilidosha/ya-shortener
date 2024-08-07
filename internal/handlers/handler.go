@@ -25,6 +25,14 @@ type ShortenURLResponse struct {
 func ShortenURL(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dbExists := opts.ConnectionString != ""
+
+		// Generate a UUID for each record
+		id, err := uuid.NewRandom()
+		if err != nil {
+			http.Error(w, "Failed to generate UUID", http.StatusInternalServerError)
+			return
+		}
+
 		// Read the long URL from the request body
 		longURL, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -35,12 +43,6 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 		// Check if the URL is valid
 		if _, err := url.ParseRequestURI(string(longURL)); err != nil {
 			http.Error(w, "Invalid URL", http.StatusBadRequest)
-			return
-		}
-		// Generate a UUID for each record
-		id, err := uuid.NewRandom()
-		if err != nil {
-			http.Error(w, "Failed to generate UUID", http.StatusInternalServerError)
 			return
 		}
 		// Set UserIDCookie
@@ -73,7 +75,7 @@ func ShortenURL(opts *config.Options) http.HandlerFunc {
 			store.SaveToDB(shortURL, string(longURL), id.String())
 		}
 		if !dbExists {
-			shortURL = generator.ShortURL(string(longURL), store.Store.GetStore())
+			shortURL = generator.GenerateShortURL(string(longURL), store.Store.GetStore())
 			store.Store.Save(shortURL, string(longURL), id.String(), opts)
 		}
 
@@ -202,7 +204,7 @@ func ShortenURLFromJSON(opts *config.Options) http.HandlerFunc {
 			store.SaveToDB(shortURL, string(request.LongURL), id.String())
 		}
 		if !dbExists {
-			shortURL = generator.ShortURL(string(request.LongURL), store.Store.GetStore())
+			shortURL = generator.GenerateShortURL(string(request.LongURL), store.Store.GetStore())
 			store.Store.Save(shortURL, string(request.LongURL), id.String(), opts)
 		}
 
@@ -241,10 +243,6 @@ type BatchInsertResponse struct {
 // No checks for collisions are done nor they are requested
 func BatchInsert(opts *config.Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
 
 		// Decode the JSON request body
 		var requests []BatchInsertRequest

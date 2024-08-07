@@ -48,7 +48,7 @@ const deleteSQL = `DELETE FROM urls WHERE short_url = $1;`
 // SQL statement to select from the table
 const selectSQL = `SELECT uuid, short_url, original_url, deleted_flag FROM urls WHERE short_url = $1;`
 
-// NewDBStore creates a new store
+// InitDB creates a new store
 func InitDB(db *sql.DB) error {
 	_, err := db.Exec(createTableSQL)
 	if err != nil {

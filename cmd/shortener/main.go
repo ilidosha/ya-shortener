@@ -69,25 +69,8 @@ func main() {
 	r.HandleFunc("/api/user/urls", handlers.GetAllURLsForUser(opts)).Methods("GET")
 	r.HandleFunc("/api/user/urls", handlers.DeleteFromURLs(opts)).Methods("DELETE")
 
-	// Initialize the hard deleter if db exists
-	if dbExists {
-		// Starting the deleter in a separate goroutine
-		go func() {
-			// Hard delete function
-			// Define the function to run every 30 seconds
-			actualDeletingFunction := func() {
-				store.HardDeleteRecord()
-			}
-
-			// Run the hard delete function every 30 seconds
-			ticker := time.NewTicker(20 * time.Second)
-			defer ticker.Stop()
-			for range ticker.C {
-				actualDeletingFunction()
-			}
-
-		}()
-	}
+	// Initialize the deleter if db exists
+	go worker(dbExists)
 
 	log.Info().Msgf("Starting server on %s\n", opts.ServerAddress)
 	serv := http.Server{
@@ -104,5 +87,23 @@ func main() {
 			log.Error().Err(err).Msgf("Error starting server: %s\n", err)
 		}
 		return
+	}
+}
+
+func worker(dbExists bool) {
+	if !dbExists {
+		return
+	}
+	// Hard delete function
+	// Define the function to run every 30 seconds
+	actualDeletingFunction := func() {
+		store.HardDeleteRecord()
+	}
+
+	// Run the hard delete function every 30 seconds
+	ticker := time.NewTicker(20 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		actualDeletingFunction()
 	}
 }
