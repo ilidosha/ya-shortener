@@ -23,7 +23,7 @@ func GenerateUUID() string {
 	// Generate a UUID for each record
 	id, err := uuid.NewRandom()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to generate UUID")
+		log.Error().Err(err).Msg("Failed to generate UUID")
 	}
 	return id.String()
 }

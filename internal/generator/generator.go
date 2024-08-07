@@ -6,7 +6,8 @@ import (
 	"sync"
 )
 
-func ShortURL(originalURL string, store *sync.Map) string {
+// GenerateShortURL Function to generate short URL
+func GenerateShortURL(originalURL string, store *sync.Map) string {
 	hash := sha1.New()
 	hash.Write([]byte(originalURL))
 	shortURL := base64.URLEncoding.EncodeToString(hash.Sum(nil))[:6]
@@ -23,6 +24,7 @@ func ShortURL(originalURL string, store *sync.Map) string {
 	return shortURL
 }
 
+// ShortURLWithoutCheck Function to generate short URL without checking for collisions need for reverse compatibility
 func ShortURLWithoutCheck(originalURL string) string {
 	hash := sha1.New()
 	hash.Write([]byte(originalURL))

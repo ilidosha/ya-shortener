@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 )
 
 type fileStore struct {
@@ -33,6 +34,10 @@ func (s *URLStore) SaveToFile(filePath string) error {
 
 		return true
 	})
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+		return err
+	}
 
 	// Create a file
 	file, err := os.Create(filePath)
